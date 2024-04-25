@@ -8,10 +8,12 @@ using Application = Microsoft.Office.Interop.Excel.Application;
 using System.Reflection;
 using Microsoft.VisualBasic;
 using System.Xml.Linq;
+using System.Diagnostics;
+using System;
 
 Console.WriteLine("Hello, World!");
 
-
+var watchAll = Stopwatch.StartNew();
 //truy cập vào file excel đang chạy
 static Tuple<Excel.Workbook, Excel.Worksheet, Excel.Range> GetOpeningExcelFile(string name, string sheetname)
 {
@@ -104,6 +106,8 @@ static int WorkingDaysInMonth(int year, int month, DateTime startDate, DateTime 
 //tính số ngày làm việc trong một quãng thời gian, chia ra theo tháng
 static Dictionary<Tuple<int, int>, Tuple<int, int>> WorkingDaysInDuration(DateTime startDate, DateTime endDate)
 {
+    var workWatch = Stopwatch.StartNew();
+
     // Initialize a dictionary to store the count of working days for each month
     Dictionary<Tuple<int, int>, Tuple<int, int>> workingDaysPerMonth = new Dictionary<Tuple<int, int>, Tuple<int, int>>();
 
@@ -120,13 +124,15 @@ static Dictionary<Tuple<int, int>, Tuple<int, int>> WorkingDaysInDuration(DateTi
         // Move to the next month
         startDate = new DateTime(year, month, 1).AddMonths(1);
     }
+    workWatch.Stop();
+    Console.WriteLine($"tinh thoi gian nghi tu ngay {startDate.ToString()} den ngay {endDate.ToString()} het {workWatch.ElapsedMilliseconds}");
 
     return workingDaysPerMonth;
 }
-
 //tính số ngày nghỉ trong tháng
 static int LeaveDaysInMonth(int year, int month, DateTime startDate, DateTime endDate)
 {
+    var leaveDayswatch = Stopwatch.StartNew();
     var listHoliday = new List<DateTime>
     {
         new DateTime(2024,1,1),
@@ -170,12 +176,14 @@ static int LeaveDaysInMonth(int year, int month, DateTime startDate, DateTime en
             leaveDays++;
         }
     }
-
+    leaveDayswatch.Stop();
+    Console.WriteLine($"leaveDayswatch la {leaveDayswatch.ElapsedMilliseconds}");
     return leaveDays;
 }
 //
 static Dictionary<Tuple<int, int>, int> LeaveDaysInDuration(DateTime startDate, DateTime endDate)
 {
+    var leaveWatch = Stopwatch.StartNew();
     // Initialize a dictionary to store the count of working days for each month
     Dictionary<Tuple<int, int>, int> leaveDaysPerMonth = new Dictionary<Tuple<int, int>, int>();
 
@@ -191,11 +199,13 @@ static Dictionary<Tuple<int, int>, int> LeaveDaysInDuration(DateTime startDate, 
         // Move to the next month
         startDate = new DateTime(year, month, 1).AddMonths(1);
     }
-
+    leaveWatch.Stop();
+    Console.WriteLine($"tinh thoi gian nghi tu ngay {startDate.ToString()} den ngay {endDate.ToString()} het {leaveWatch.ElapsedMilliseconds}");
     return leaveDaysPerMonth;
 }
 
 #region Lấy số ngày OT theo tháng
+var watch = Stopwatch.StartNew();
 var excelOT = GetOpeningExcelFile("Simulate", "OT");
 int accountColumnInOTSheet = 3;
 int OTSummaryColumn = 14;
@@ -227,9 +237,12 @@ List<Models> GetlstOTModel(int accountColumnInOTSheet, int OTSummaryColumn, int 
          && excelOT.Item3.Cells[startRowOTSheet, MonthColumn] != null);
     return lstOverTimePersonal;
 }
+watch.Stop();
+Console.WriteLine($"thoi gian chay la {watch.ElapsedMilliseconds}");
 #endregion
 
 #region Lấy số ngày nghỉ theo tháng
+var watchLeave = Stopwatch.StartNew();
 var excelTMS = GetOpeningExcelFile("Simulate", "TMS");
 int startRowLeaveSheet = 2;
 int accountColumnLeaveSheet = 3;
@@ -266,14 +279,16 @@ List<PersonalLeaveDay> GetLstLeaveModels(int startRowLeaveSheet, int accountColu
             startRowLeaveSheet++;
         }
     }
-
     return lstPersonalLeaveDay;
 }
 
-Console.WriteLine();
+watchLeave.Stop();
+Console.WriteLine($"thoi gian chay la {watchLeave.ElapsedMilliseconds}");
 #endregion
 
 #region Lấy số ngày làm việc thực tế
+var watchActualWorking = Stopwatch.StartNew();
+
 var excelCalendarSheet = GetOpeningExcelFile("Simulate", "Calendar");
 int startRow = 3;
 int fromDateColumn = 7;
@@ -311,6 +326,10 @@ List<RangeTimeModel> GetActualWorkingDays(int startRow, int fromDateColumn, int 
          && excelCalendarSheet.Item3.Cells[startRow, hoursPerDayColumn] != null);
     return lstRangeModel;
 }
+
+watchActualWorking.Stop();
+Console.WriteLine($"watchActualWorking la {watchActualWorking.ElapsedMilliseconds}");
+
 #endregion
 
 var lstOT = GetlstOTModel(accountColumnInOTSheet, OTSummaryColumn, MonthColumn, startRowOTSheet);
@@ -322,7 +341,8 @@ var lastrow = 0;
 Excel.Range last = excelCalendarSheet.Item2.Cells.SpecialCells(Excel.XlCellType.xlCellTypeLastCell, Type.Missing);
 Excel.Range range = excelCalendarSheet.Item2.get_Range("A1", last);
 lastrow = last.Row;
-Console.WriteLine();
+var lastColumn = 0;
+lastColumn = last.Column;
 
 #region Khởi tạo 5 mảng có số cột là số tháng và số hàng là
 int accountColumnInArray = 12;
@@ -342,11 +362,17 @@ for (int i = 0; i < expectedWorkingdaysArray.GetLength(0); i++)
     {
         expectedWorkingdaysArray[i, workingday.Key.Item2 - 1] = workingday.Value.Item2;
     }
-    expectedWorkingdaysArray[i, accountColumnInArray] = lstRangeModel.Where(model => (model.Row == i + 3)).FirstOrDefault().Account;
+    try
+    {
+        expectedWorkingdaysArray[i, accountColumnInArray] = lstRangeModel.Where(model => (model.Row == i + 3)).FirstOrDefault().Account;
+    }
+    catch { }
 }
 #endregion 
 
 #region mảng OtDaysArray, tính số giờ làm việc OT
+var watchOTWorkingdays = Stopwatch.StartNew();
+
 for (int i = 0; i < OtDaysArray.GetLength(0); i++)
 {
     OtDaysArray[i, accountColumnInArray] = lstRangeModel.Where(model => (model.Row == i + 3)).FirstOrDefault().Account;
@@ -366,29 +392,31 @@ for (int i = 0; i < OtDaysArray.GetLength(0); i++)
                 double otHours = double.Parse(OtDaysArray[i, otPerson.Month - 1].ToString());
                 otHours += otPerson.OverTimeHoursSummary;
                 OtDaysArray[i, otPerson.Month - 1] = otHours;
-
             }
-
         }
-        //OtDaysArray[i, lstotPersonal.Month - 1] = sumHoursByAccount.SumHours;
     }
 
 }
+
+watchOTWorkingdays.Stop();
+Console.WriteLine($"watchOTWorkingdays la {watchOTWorkingdays.ElapsedMilliseconds}");
+
 #endregion
 Console.WriteLine();
 
 #region Tính số ngày nghỉ thực tế
-for (int i = 0; i < leaveDaysArray.GetLength(0); i ++)
-{
-    leaveDaysArray[i, accountColumnInArray] = lstRangeModel.Where(model => (model.Row == i + 3)).FirstOrDefault().Account;
-    if (isDuplicated(i, OtDaysArray, OtDaysArray[i, accountColumnInArray].ToString())) continue;
+//for (int i = 0; i < leaveDaysArray.GetLength(0); i ++)
+//{
+//    leaveDaysArray[i, accountColumnInArray] = lstRangeModel.Where(model => (model.Row == i + 3)).FirstOrDefault().Account;
+//    if (isDuplicated(i, OtDaysArray, OtDaysArray[i, accountColumnInArray].ToString())) continue;
 
 
-}
+//}
 #endregion
 
 //tính giờ thực tế
 #region Tính số ngày đi làm thực tế
+var watchActualWorkingDays = Stopwatch.StartNew();
 for (int i = 0; i < actualWorkingdaysArray.GetLength(0); i++)
 {
     actualWorkingdaysArray[i, accountColumnInArray] = lstRangeModel.Where(model => (model.Row == i + 3)).FirstOrDefault().Account;
@@ -403,15 +431,17 @@ foreach (var rangeModel in lstRangeModel)
         actualWorkingdaysArray[rangeModel.Row - 3, duration.Key.Item2 - 1] = duration.Value.Item1 * rangeModel.HoursPerDay;
     }
 }
+watchActualWorkingDays.Stop();
+Console.WriteLine($"watchActualWorkingDays la {watchActualWorkingDays.ElapsedMilliseconds}");
 
-for (int i = 0; i < actualWorkingdaysArray.GetLength(0); i ++)
-{
-    for (int j = 0;j < actualWorkingdaysArray.GetLength(1); j ++)
-    {
-        Console.Write(actualWorkingdaysArray[i, j] + " ");
-    }
-    Console.Write("\n");
-}
+//for (int i = 0; i < actualWorkingdaysArray.GetLength(0); i ++)
+//{
+//    for (int j = 0;j < actualWorkingdaysArray.GetLength(1); j ++)
+//    {
+//        Console.Write(actualWorkingdaysArray[i, j] + " ");
+//    }
+//    Console.Write("\n");
+//}
 #endregion
 #region test array
 //var excelTemp = GetOpeningExcelFile("Simulate", "TestCase");
@@ -423,7 +453,7 @@ for (int i = 0; i < actualWorkingdaysArray.GetLength(0); i ++)
 
 #region Get Dictionary of TMS
 // Get distinct values by the Name property
-
+var getLeaveWatch = Stopwatch.StartNew();
 var distinctList = lstLeaveDays
                     .Select(p => new {Account = p.Account.ToLower() })
                     .Distinct().ToList();
@@ -432,6 +462,7 @@ for (int i = 0;  i < tempLeaveArray.GetLength(0); i ++)
 {
     tempLeaveArray[i, accountColumnInArray] = distinctList[i].Account;
 }
+
 
 foreach(var leaveDay in lstLeaveDays)
 {
@@ -455,7 +486,12 @@ foreach(var leaveDay in lstLeaveDays)
             tempLeaveArray[row, leaveDuration.Key.Item2 - 1] = currentLeaveCount;
         }
     }
+
 }
+
+getLeaveWatch.Stop();
+Console.WriteLine($"get leave watch la {getLeaveWatch.ElapsedMilliseconds}");
+
 int GetRowWithProvidedAccount(object[,] tempLeaveArray, string account)
 {
     for (int i = 0; i < tempLeaveArray.GetLength(0); i++)
@@ -472,81 +508,198 @@ int GetRowWithProvidedAccount(object[,] tempLeaveArray, string account)
 Console.WriteLine();
 #endregion
 
+//var manmonthWatch = Stopwatch.StartNew();
+//for (int i = 0; i < manMonthArray.GetLength(0); i++)
+//{
+//    manMonthArray[i, accountColumnInArray] = lstRangeModel.Where(model => (model.Row == i + 3)).FirstOrDefault().Account;
+
+//    for (int j = 0; j < manMonthArray.GetLength(1)-1; j++)
+//    {
+//        double actual_time = 0.0;
+//        double expectedTime = 0.0;
+//        double OT_time = 0.0;
+//        try
+//        {
+//            actual_time = double.Parse(actualWorkingdaysArray[i, j].ToString());
+//        }
+//        catch
+//        {
+//            actual_time = 0.0;
+//        }
+
+//        try
+//        {
+//            expectedTime = double.Parse(expectedWorkingdaysArray[i, j].ToString());
+//        }
+//        catch
+//        {
+//            expectedTime = 0.0;
+//        }
+
+//        try
+//        {
+//            OT_time = double.Parse(OtDaysArray[i, j].ToString());
+//        }
+//        catch
+//        {
+//            OT_time = 0.0;
+//        }
+//        //double OT_time = arr_OT[i, j];
+//        string IDName = manMonthArray[i, accountColumnInArray].ToString();
+//        double total_WorkinTime = actual_time + OT_time;
+//        double TSM_time = Get_TMS_Value(ref tempLeaveArray, IDName, j, total_WorkinTime);
+
+//        manMonthArray[i, j] = Math.Round((total_WorkinTime - TSM_time) / expectedTime, 2);
+//    }
+//}
+//manmonthWatch.Stop();
+//Console.WriteLine($"man month la {manmonthWatch.ElapsedMilliseconds}");
+//double Get_TMS_Value(ref object[,] tempLeaveArray, string IDName, int month, double total_WorkingTime)
+//{
+//    double Value = 0.0;
+
+//    for (int i = 0; i < tempLeaveArray.GetLength(0); i++)
+//    {
+//        if (tempLeaveArray[i, tempLeaveArray.GetLength(1)-1].ToString().ToLower() == IDName.ToLower())
+//        {
+//            if (tempLeaveArray[i, month] is null) tempLeaveArray[i, month] = 0.0;
+//            Value = double.Parse(tempLeaveArray[i, month].ToString());
+
+//            if (Value < total_WorkingTime)
+//            {
+//                tempLeaveArray[i, month] = 0;
+//                return Value;
+//            }
+//            if (Value > total_WorkingTime)
+//            {
+//                //tempLeaveArray[i, month] = Get_TMS_Value(tempLeaveArray, IDName, month, Value - total_WorkingTime);
+//                //return total_WorkingTime;
+//                double remainingTime = Value - total_WorkingTime;
+//                tempLeaveArray[i, month] = remainingTime;
+//                return total_WorkingTime;
+
+//            }
+//        }
+//    }
+
+//    return Value; // Return Value even if no conditions are met
+//}
+
+var manmonthWatch = Stopwatch.StartNew();
+
+#region caculate man month updated
+double leaveValue = 0.0;
+Dictionary<Tuple<string, int>, double> leaveValues = new Dictionary<Tuple<string, int>, double>();
+for (int i = 0; i < tempLeaveArray.GetLength(0); i++)
+{
+    string leaveID = tempLeaveArray[i, tempLeaveArray.GetLength(1) - 1]?.ToString().ToLower();
+    
+    for (int month = 0; month < tempLeaveArray.GetLength(1) - 1; month++)
+    {
+        if (double.TryParse(tempLeaveArray[i, month]?.ToString(), out leaveValue))
+        {
+            leaveValues[Tuple.Create(leaveID, month)] = leaveValue;
+            //leaveValues[leaveID] = leaveValue;
+        }
+    }
+}
 
 for (int i = 0; i < manMonthArray.GetLength(0); i++)
 {
-    manMonthArray[i, accountColumnInArray] = lstRangeModel.Where(model => (model.Row == i + 3)).FirstOrDefault().Account;
+    var account = lstRangeModel.FirstOrDefault(model => model.Row == i + 3)?.Account;
+    manMonthArray[i, accountColumnInArray] = account?.ToString();
 
-    for (int j = 0; j < manMonthArray.GetLength(1)-1; j++)
+    for (int j = 0; j < manMonthArray.GetLength(1) - 1; j++)
     {
-        double actual_time = 0.0;
-        double expectedTime = 0.0;
-        double OT_time = 0.0;
-        try
-        {
-            actual_time = double.Parse(actualWorkingdaysArray[i, j].ToString());
-        }
-        catch
-        {
-            actual_time = 0.0;
-        }
+        double actual_time;
+        double expectedTime;
+        double OT_time;
 
-        try
-        {
-            expectedTime = double.Parse(expectedWorkingdaysArray[i, j].ToString());
-        }
-        catch
-        {
-            expectedTime = 0.0;
-        }
+        double.TryParse(actualWorkingdaysArray[i, j]?.ToString(), out actual_time);
+        double.TryParse(expectedWorkingdaysArray[i, j]?.ToString(), out expectedTime);
+        double.TryParse(OtDaysArray[i, j]?.ToString(), out OT_time);
 
-        try
-        {
-            OT_time = double.Parse(OtDaysArray[i, j].ToString());
-        }
-        catch
-        {
-            OT_time = 0.0;
-        }
-        //double OT_time = arr_OT[i, j];
-        string IDName = manMonthArray[i, accountColumnInArray].ToString();
+        string IDName = manMonthArray[i, accountColumnInArray]?.ToString();
         double total_WorkinTime = actual_time + OT_time;
-        double TSM_time = Get_TMS_Value(ref tempLeaveArray, IDName, j, total_WorkinTime);
-
-        manMonthArray[i, j] = Math.Round((total_WorkinTime - TSM_time) / expectedTime, 2);
+        //double TSM_time = Get_TMS_Updated_Value(ref tempLeaveArray, IDName, j, total_WorkinTime, leaveValues);
+        var TSM_time = Get_TMS_Updated_Value(ref tempLeaveArray, IDName, j, total_WorkinTime, leaveValues);
+        if (i == 229)
+        {
+            Console.WriteLine($"dong thu {i} voi thang {j + 1} co gia tri tms  la {TSM_time.Item1} ;total_WorkinTime la {total_WorkinTime} ");
+        }
+        manMonthArray[i, j] = Math.Round((total_WorkinTime - TSM_time.Item1) / expectedTime, 2);
     }
 }
+
+leaveValue = 0.0;
+//Dictionary<string, double> leaveValues = new Dictionary<string, double>();
+
 
 double Get_TMS_Value(ref object[,] tempLeaveArray, string IDName, int month, double total_WorkingTime)
 {
-    double Value = 0.0;
+    Dictionary<string, double> leaveValues = new Dictionary<string, double>();
 
     for (int i = 0; i < tempLeaveArray.GetLength(0); i++)
     {
-        if (tempLeaveArray[i, tempLeaveArray.GetLength(1)-1].ToString().ToLower() == IDName.ToLower())
+        string leaveID = tempLeaveArray[i, tempLeaveArray.GetLength(1) - 1]?.ToString().ToLower();
+        if (double.TryParse(tempLeaveArray[i, month]?.ToString(), out leaveValue))
         {
-            if (tempLeaveArray[i, month] is null) tempLeaveArray[i, month] = 0.0;
-            Value = double.Parse(tempLeaveArray[i, month].ToString());
-
-            if (Value < total_WorkingTime)
-            {
-                tempLeaveArray[i, month] = 0;
-                return Value;
-            }
-            if (Value > total_WorkingTime)
-            {
-                //tempLeaveArray[i, month] = Get_TMS_Value(tempLeaveArray, IDName, month, Value - total_WorkingTime);
-                //return total_WorkingTime;
-                double remainingTime = Value - total_WorkingTime;
-                tempLeaveArray[i, month] = remainingTime;
-                return total_WorkingTime;
-
-            }
+            leaveValues[leaveID] = leaveValue;
         }
     }
 
-    return Value; // Return Value even if no conditions are met
+    if (leaveValues.TryGetValue(IDName?.ToLower(), out leaveValue))
+    {
+        if (leaveValue < total_WorkingTime)
+        {
+            leaveValues[IDName?.ToLower()] = 0;
+            return leaveValue;
+        }
+        if (leaveValue > total_WorkingTime)
+        {
+            double remainingTime = leaveValue - total_WorkingTime;
+            leaveValues[IDName?.ToLower()] = remainingTime;
+            return total_WorkingTime;
+        }
+    }
+
+    return 0.0; // Return 0 if no matching condition is met
 }
+
+
+Tuple<double,Dictionary<Tuple<string, int>, double>> Get_TMS_Updated_Value(ref object[,] tempLeaveArray, string IDName, int month, double total_WorkingTime, Dictionary<Tuple<string, int>, double> leaveValues)
+{
+    Tuple<string, int> leaveKey = Tuple.Create(IDName, month);
+    //for (int i = 0; i < tempLeaveArray.GetLength(0); i++)
+    //{
+    //    string leaveID = tempLeaveArray[i, tempLeaveArray.GetLength(1) - 1]?.ToString().ToLower();
+    //    if (double.TryParse(tempLeaveArray[i, month]?.ToString(), out leaveValue))
+    //    {
+    //        leaveValues[Tuple.Create(leaveID, month)] = leaveValue;
+    //        //leaveValues[leaveID] = leaveValue;
+    //    }
+    //}
+
+    if (leaveValues.TryGetValue(Tuple.Create(IDName?.ToLower(), month), out leaveValue))
+    {
+        if (leaveValue <= total_WorkingTime)
+        {
+            leaveValues[Tuple.Create(IDName?.ToLower(), month)] = 0;
+            return Tuple.Create(leaveValue, leaveValues);
+        }
+        if (leaveValue > total_WorkingTime)
+        {
+            double remainingTime = leaveValue - total_WorkingTime;
+            leaveValues[Tuple.Create(IDName?.ToLower(), month)] = remainingTime;
+            return Tuple.Create(total_WorkingTime, leaveValues);
+        }
+    }
+
+    return Tuple.Create(0.0, leaveValues); // Return 0 if no matching condition is met
+}
+manmonthWatch.Stop();
+Console.WriteLine($"man month la {manmonthWatch.ElapsedMilliseconds}");
+#endregion
 
 
 bool isDuplicated(int row, object[,] array2D, string account)
@@ -564,14 +717,84 @@ bool isDuplicated(int row, object[,] array2D, string account)
 
 Marshal.ReleaseComObject(excelOT.Item2);
 Marshal.ReleaseComObject(excelTMS.Item2);
-Marshal.ReleaseComObject(excelCalendarSheet.Item2);
+//Marshal.ReleaseComObject(excelCalendarSheet.Item2);
 
 //Điền 
-var excelTemp = GetOpeningExcelFile("Simulate", "TestCase");
-Excel.Range rangeTest = excelTemp.Item2.Range["A1"].Resize[lastrow, 13];
-rangeTest.Value = manMonthArray;
-excelTemp.Item1.Saved = true;
-Console.WriteLine();
+//var excelTemp = GetOpeningExcelFile("Simulate", "TestCase");
+
+#region paste value in Calendar sheet
+int startPasteColumn = 0;
+int startPasteRow = 0;
+var currentExcel = excelCalendarSheet.Item2.Range["A1"].Resize[lastrow, 30];
+var currentExcelValue = currentExcel.Value;
+for(int i = 1; i <= currentExcelValue.GetLength(0); i ++)
+{
+    if (currentExcelValue[1, i] is null) continue;
+    if (currentExcelValue[1, i].ToString() == "1")
+    {
+        startPasteColumn = i-1;
+        break;
+    }
+}
+
+for (int i = 1; i <= currentExcelValue.GetLength(0); i ++)
+{
+    for (int j = 1; j <= currentExcelValue.GetLength(1); j ++)
+    {
+        if (currentExcelValue[i, j] is null) continue;
+        if (currentExcelValue[i, j].ToString() == "Job")
+        {
+            startPasteRow = i + 1;
+            break;
+        }
+
+    }
+}
+Excel.Range pastedRange = excelCalendarSheet.Item2.Cells[startPasteRow, startPasteColumn].Resize[lastrow - startRow, 12];
+pastedRange.Value = manMonthArray;
+excelCalendarSheet.Item1.Saved = true;
+#endregion
+
+#region Tính số ngày abnormal case
+//var excelAbnormalSheet = 
+var numColumnInAbNormalSheet = 3;
+var excelAbnormalSheet = GetOpeningExcelFile("Simulate", "AbnormalCase");
+currentExcel = excelAbnormalSheet.Item2.Range["A1"].Resize[lastrow, 30];
+currentExcelValue = currentExcel.Value;
+for (int i = 1; i <= currentExcelValue.GetLength(0); i++)
+{
+    for (int j = 1; j <= currentExcelValue.GetLength(1); j++) {
+        if (currentExcelValue[i, j] is null) continue;
+        if (currentExcelValue[i, j].ToString() == "Account")
+        {
+            startPasteColumn = j;
+            startPasteRow = i+1;
+            break;
+        }
+    }
+}
+
+
+
+var lstAbNormal = leaveValues.Where(leaveValue => leaveValue.Value != 0).ToList();
+object[,] abnormalArray = new object[lstAbNormal.Count, 3];
+int startRowInAbnormal = 0;
+foreach(var abnormal in lstAbNormal)
+{
+    abnormalArray[startRowInAbnormal, 0] = abnormal.Key.Item1;
+    //them thang voi 1 
+    abnormalArray[startRowInAbnormal, 1] = abnormal.Key.Item2 + 1;
+    abnormalArray[startRowInAbnormal, 2] = abnormal.Value;
+    startRowInAbnormal++;
+}
+Excel.Range pastedAbnormalRange = excelAbnormalSheet.Item2.Cells[startPasteRow, startPasteColumn]
+                                                    .Resize[abnormalArray.GetLength(0), abnormalArray.GetLength(1)];
+pastedAbnormalRange.Value = abnormalArray;
+excelAbnormalSheet.Item1.Saved = true;
+watchAll.Stop();
+Console.WriteLine("thoi gian chay " + watchAll.ElapsedMilliseconds + "ms");
+#endregion
+//Console.WriteLine();
 
 
 
