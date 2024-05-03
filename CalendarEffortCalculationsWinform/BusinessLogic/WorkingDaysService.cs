@@ -24,7 +24,6 @@ namespace CalendarEffortCalculationsWinform.BusinessLogic
                 new DateTime(2024,2,13),
                 new DateTime(2024,2,14),
                 new DateTime(2024,4,18),
-                new DateTime(2024,4,29),
                 new DateTime(2024,4,30),
                 new DateTime(2024,5,1),
                 new DateTime(2024,9,2),

@@ -1,10 +1,10 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using static System.Net.Mime.MediaTypeNames;
 using System.Runtime.InteropServices;
-using Microsoft.Office.Interop.Excel;
-using Excel = Microsoft.Office.Interop.Excel;
+//using Microsoft.Office.Interop.Excel;
+//using Excel = Microsoft.Office.Interop.Excel;
 using CalendarEffortCaculations;
-using Application = Microsoft.Office.Interop.Excel.Application;
+//using Application = Microsoft.Office.Interop.Excel.Application;
 using System.Reflection;
 using Microsoft.VisualBasic;
 using System.Xml.Linq;

@@ -9,18 +9,6 @@
   </PropertyGroup>
 	
   <ItemGroup>
-	<COMReference Include="Microsoft.Office.Interop.Excel">
-		<EmbedInteropTypes>true</EmbedInteropTypes>
-		<Guid>00020813-0000-0000-c000-000000000046</Guid>
-		<Isolated>false</Isolated>
-		<Lcid>0</Lcid>
-		<WrapperTool>primary</WrapperTool>
-		<VersionMajor>1</VersionMajor>
-		<VersionMinor>9</VersionMinor>
-	</COMReference>
-  </ItemGroup>
-	
-  <ItemGroup>
     <PackageReference Include="EPPlus" Version="7.1.1" />
     <PackageReference Include="EPPlus.Interfaces" Version="6.1.1" />
     <PackageReference Include="EPPlus.System.Drawing" Version="6.1.1" />
