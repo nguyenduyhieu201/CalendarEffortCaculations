@@ -117,9 +117,12 @@ namespace CalendarEffortCalculationsWinform
 
                 for (int i = 0; i < OtDaysArray.GetLength(0); i++)
                 {
+
                     OtDaysArray[i, accountColumnInArray] = workTimes.Where(model => (model.Row == i + startRowInExcel)).FirstOrDefault().Account;
+                    //OT sẽ chỉ được tính 1 lần trong account tại resource allocation
                     if (isDuplicated(i, OtDaysArray, OtDaysArray[i, accountColumnInArray].ToString())) continue;
 
+                    //
                     var lstotPersonal = otTimes.Where(ot => ot.Account.ToLower().Equals(OtDaysArray[i, accountColumnInArray].ToString().ToLower())).ToList();
                     if (lstotPersonal != null)
                     {
@@ -356,7 +359,6 @@ namespace CalendarEffortCalculationsWinform
 
                 range.LoadFromArrays(dataList);
                 #endregion
-
                 #region Tính abnormal case
                 ExcelRangeBase titleAbnormalRange = abnormalSheet.Cells[1, 1, 4, 80];
 
@@ -428,6 +430,8 @@ namespace CalendarEffortCalculationsWinform
                 abNormalRange.LoadFromArrays(dataList);
                 Ep.Save();
                 #endregion
+
+
                 MessageBox.Show("Thành công");
             }
             catch (Exception ex)
@@ -489,7 +493,7 @@ namespace CalendarEffortCalculationsWinform
             abnormalSheet = Ep.Workbook.Worksheets[Constants.AbnormalSheetName];
             if (calendarSheet is null || otSheet is null || tmsSheet is null)
             {
-                throw new Exception("KHông tìm thấy sheet calendar hoặc OT hoặc TMS. Vui lòng nhập lại");
+                throw new Exception("Không tìm thấy sheet calendar hoặc OT hoặc TMS. Vui lòng nhập lại");
             }
             if (abnormalSheet == null)
             {
@@ -516,6 +520,13 @@ namespace CalendarEffortCalculationsWinform
 
         }
 
+        /// <summary>
+        /// Kiểm tra xem account đã tồn tại hay chưa
+        /// </summary>
+        /// <param name="row"></param>
+        /// <param name="array2D"></param>
+        /// <param name="account"></param>
+        /// <returns></returns>
         bool isDuplicated(int row, object[,] array2D, string account)
         {
             for (int i = 0; i < row; i++)

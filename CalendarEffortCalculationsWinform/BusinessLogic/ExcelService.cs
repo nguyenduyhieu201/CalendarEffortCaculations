@@ -54,15 +54,30 @@ namespace CalendarEffortCalculationsWinform.BusinessLogic
             for (int i = 0; i < excelValue.GetLength(0); i ++)
             {
                 Console.WriteLine($"i la {i}");
-                lstRangeModel.Add(new WorkRangeTimeModel
+                try
                 {
-                    FromDate = DateTime.FromOADate(int.Parse(excelValue[i, fromDateColumn].ToString())),
-                    ToDate = DateTime.FromOADate(int.Parse(excelValue[i, toDateColumn].ToString())),
-                    Row = i + startRow,
-                    HoursPerDay = double.Parse(excelValue[i, hoursPerDateColumn].ToString()),
-                    Account = excelValue[i, accountColumn].ToString(),
-                    ProjectCode = excelValue[i, projectCodeColumn].ToString()
-                }); ;
+                    lstRangeModel.Add(new WorkRangeTimeModel
+                    {
+                        FromDate = DateTime.FromOADate(int.Parse(excelValue[i, fromDateColumn].ToString())),
+                        ToDate = DateTime.FromOADate(int.Parse(excelValue[i, toDateColumn].ToString())),
+                        Row = i + startRow,
+                        HoursPerDay = double.Parse(excelValue[i, hoursPerDateColumn].ToString()),
+                        Account = excelValue[i, accountColumn].ToString(),
+                        ProjectCode = excelValue[i, projectCodeColumn].ToString()
+                    });
+                }
+                catch{
+                    lstRangeModel.Add(new WorkRangeTimeModel
+                    {
+                        FromDate = DateTime.Parse(excelValue[i, fromDateColumn].ToString()),
+                        ToDate = DateTime.Parse(excelValue[i, toDateColumn].ToString()),
+                        Row = i + startRow,
+                        HoursPerDay = double.Parse(excelValue[i, hoursPerDateColumn].ToString()),
+                        Account = excelValue[i, accountColumn].ToString(),
+                        ProjectCode = excelValue[i, projectCodeColumn].ToString()
+                    });
+                }
+
             }
             return lstRangeModel;
         }
@@ -131,7 +146,9 @@ namespace CalendarEffortCalculationsWinform.BusinessLogic
             int lastRow = otWorksheet.Dimension.End.Row;
             int lastColumn = otWorksheet.Dimension.End.Column;
             int accountColumnInOTSheet = 0;
-            int OTSummaryColumn = 0;
+            int OTSummaryColumnDay = 0;
+            int OTSummaryColumnNight = 0;
+
             int MonthColumn = 0;
             int startRowOTSheet = 0;
             ExcelRangeBase titleRange = otWorksheet.Cells[1, 1, 4, 80];
@@ -141,12 +158,14 @@ namespace CalendarEffortCalculationsWinform.BusinessLogic
                 for (int j = 0; j < titleExcelValue.GetLength(1); j++)
                 {
                     if (titleExcelValue[i, j] is null) continue;
-                    if (titleExcelValue[i, j].ToString().ToLower() == "tài khoản") { 
+                    if (titleExcelValue[i, j].ToString().ToLower().Contains("account")) { 
                         accountColumnInOTSheet = j;
                         startRowOTSheet = i + 2;
                     }
 
-                    if (titleExcelValue[i, j].ToString().ToLower() == "tổng số giờ OT") OTSummaryColumn = j;
+                    if (titleExcelValue[i, j].ToString().ToLower() == "day time") OTSummaryColumnDay = j;
+                    if (titleExcelValue[i, j].ToString().ToLower() == "night time") OTSummaryColumnNight = j;
+
                     if (titleExcelValue[i, j].ToString().ToLower() == ("tháng")) MonthColumn = j;
                 }
             }
@@ -156,6 +175,7 @@ namespace CalendarEffortCalculationsWinform.BusinessLogic
             ExcelRange range = otWorksheet.Cells[startRowOTSheet, 1, lastRow, lastColumn];
             // Load data from the range into the DataTable
             object[,] excelLeaveValues = range.Value as object[,];
+            //add data 
             for (int i = 0; i < excelLeaveValues.GetLength(0);i ++)
             {
                 try
@@ -163,8 +183,10 @@ namespace CalendarEffortCalculationsWinform.BusinessLogic
                     lstOtModel.Add(new OTModels
                     {
                         Account = excelLeaveValues[i, accountColumnInOTSheet].ToString(),
-                        OverTimeHoursSummary = double.Parse(excelLeaveValues[i, OTSummaryColumn].ToString()),
-                        Month = int.Parse(excelLeaveValues[i, MonthColumn].ToString())
+                        OverTimeHoursSummary = double.Parse(excelLeaveValues[i, OTSummaryColumnDay].ToString()) + double.Parse(excelLeaveValues[i, OTSummaryColumnNight].ToString()),
+                        //Month = int.Parse(excelLeaveValues[i, MonthColumn].ToString()),
+                        Month = DateTime.Parse(excelLeaveValues[i, MonthColumn].ToString()).Month
+
                     });
                 }
                 catch
