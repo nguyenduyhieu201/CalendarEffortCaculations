@@ -25,6 +25,7 @@ namespace CalendarEffortCalculationsWinform.BusinessLogic
             object[,] data = new object[400, 30];
             ExcelRangeBase titleRange = worksheet.Cells[1, 1, 4, 80];
             object[,] titleExcelValue = titleRange.Value as object[,];
+            
             for (int i = 0; i < titleExcelValue.GetLength(0); i ++)
             {
                 for (int j = 0; j < titleExcelValue.GetLength(1); j++)
@@ -53,7 +54,6 @@ namespace CalendarEffortCalculationsWinform.BusinessLogic
             List<WorkRangeTimeModel> lstRangeModel = new List<WorkRangeTimeModel>();
             for (int i = 0; i < excelValue.GetLength(0); i ++)
             {
-                Console.WriteLine($"i la {i}");
                 try
                 {
                     lstRangeModel.Add(new WorkRangeTimeModel
@@ -117,14 +117,18 @@ namespace CalendarEffortCalculationsWinform.BusinessLogic
                 }
             }
             titleRange.Dispose();
-
             ExcelRange range = tmsworksheet.Cells[startRow, 1, lastRow, lastColumn];
 
             // Load data from the range into the DataTable
             object[,] excelLeaveValues = range.Value as object[,];
+           
             List<PersonalLeaveDay> lstPersonalLeaveModel = new List<PersonalLeaveDay>();
             for (int i = 0; i < excelLeaveValues.GetLength(0); i++)
             {
+                if (excelLeaveValues[i, leaveColumn] is null)
+                {
+                    continue;
+                }
                 if (excelLeaveValues[i, leaveColumn].ToString().ToLower().Contains("nghỉ") || excelLeaveValues[i, leaveColumn].ToString().ToLower().Contains("tạm hoãn"))
                 lstPersonalLeaveModel.Add(new PersonalLeaveDay
                 {
